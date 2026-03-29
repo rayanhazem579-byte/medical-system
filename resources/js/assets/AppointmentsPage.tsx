@@ -11,6 +11,7 @@ interface AppointmentsPageProps {
   tx: any;
   depts?: any[];
   doctors?: any[];
+  nurses?: any[];
 }
 
 const DAYS_FULL = [
@@ -30,7 +31,7 @@ const APPOINTMENTS_DATA = [
   { id: 4, patient: "ناديا فاروق", patientEn: "Nadia Farouk", type: "فحص عظام", typeEn: "Orthopedic Check", dayIndex: 2, startHour: 9, duration: 1, color: "bg-green-500", status: "confirmed", doctor: "د. ليلى أحمد", phone: "01566778899", followUpCount: 4 },
 ];
 
-export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, depts = [], doctors = [] }) => {
+export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, depts = [], doctors = [], nurses = [] }) => {
   const [viewMode, setViewMode] = useState<'roster' | 'doctorView'>('roster');
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
@@ -51,8 +52,47 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, de
     if (!activeDeptId && depts.length > 0) setActiveDeptId(depts[0].id);
   }, [depts]);
 
+  useEffect(() => {
+    if (tx?.patients && tx.patients.length > 0) {
+      const dynamicAppointments = tx.patients.filter((p: any) => p.doctorId || p.doctor_id || p.doctor).map((p: any) => {
+          const docId = p.doctorId || p.doctor_id;
+          const doc = doctors.find(d => String(d.id) === String(docId)) || doctors.find(d => d.nameAr === p.doctor || d.nameEn === p.doctor);
+          const docName = doc ? (isAr ? doc.nameAr : doc.nameEn) : p.doctor;
+          
+          return {
+             id: p.id + 10000, // offset id to avoid conflicts with mock data
+             patient: p.nameAr || p.name_ar || p.name || 'مريض غير معروف',
+             patientEn: p.nameEn || p.name_en || p.name || 'Unknown Patient',
+             type: p.specialty || p.medical_history || 'كشف',
+             typeEn: 'Checkup',
+             dayIndex: new Date(p.created_at || new Date()).getDay(),
+             startHour: p.shift === 'evening' ? 18 : p.shift === 'night' ? 22 : 9, // Base on shift if available
+             duration: 1,
+             color: 'bg-indigo-500',
+             status: 'confirmed',
+             doctor: docName || 'غير محدد',
+             phone: p.phone || '',
+             followUpCount: 0
+          };
+      });
+      
+      const newAp = [...APPOINTMENTS_DATA];
+      dynamicAppointments.forEach((da: any) => {
+        if (!newAp.find(a => a.id === da.id)) {
+           newAp.push(da);
+        }
+      });
+      setAppointments(newAp);
+    }
+  }, [tx?.patients, doctors, isAr]);
+
+  const getTodayNameAr = () => ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"][new Date().getDay()];
+  const [selectedRosterDay, setSelectedRosterDay] = useState(getTodayNameAr());
+
   const activeDept = depts.find(d => String(d.id) === String(activeDeptId)) || depts[0];
   const deptDoctors = doctors.filter(doc => String(doc.deptId) === String(activeDeptId) || doc.deptAr === activeDept?.nameAr);
+  const todayStaff = deptDoctors.filter(doc => (doc.day_shifts || []).some((s:any) => s.day === selectedRosterDay || s.day === DAYS_FULL.find(d => d.labelAr === selectedRosterDay)?.labelEn));
+  const deptStaff = [...doctors, ...nurses].filter(staff => String(staff.deptId) === String(activeDeptId) || staff.deptAr === activeDept?.nameAr);
 
   const filteredDoctors = doctors.filter(doc => 
     (isAr ? doc.nameAr : doc.nameEn).toLowerCase().includes(doctorSearch.toLowerCase())
@@ -186,23 +226,44 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, de
            </div>
            
            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              {depts.map(dept => (
-                 <button
-                   key={dept.id}
-                   onClick={() => { setActiveDeptId(dept.id); setViewMode('roster'); setSelectedDoctor(null); }}
-                   className={`w-full transition-all duration-300 group flex items-center gap-3 ${isNavCollapsed ? 'justify-center p-2 rounded-xl' : 'p-4 rounded-2xl'} ${String(activeDeptId) === String(dept.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-[1.02]' : 'bg-gray-50/50 text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200'}`}
-                 >
-                    <div className={`transition-all duration-300 flex items-center justify-center font-black shrink-0 ${isNavCollapsed ? 'w-10 h-10 rounded-lg text-sm' : 'w-10 h-10 rounded-xl text-base'} ${String(activeDeptId) === String(dept.id) ? 'bg-white/20 text-white' : 'bg-white shadow-sm text-indigo-600'}`}>
-                       {dept.nameEn?.charAt(0)}
-                    </div>
-                    {!isNavCollapsed && (
-                       <div className={isAr ? 'text-right' : 'text-left'}>
-                          <p className={`text-xs font-black ${String(activeDeptId) === String(dept.id) ? 'text-white' : 'text-gray-800'}`}>{isAr ? dept.nameAr : dept.nameEn || 'N/A'}</p>
-                          <p className={`text-[8px] font-bold uppercase tracking-wider ${String(activeDeptId) === String(dept.id) ? 'text-white/60' : 'text-gray-400'}`}>{doctors.filter(doc => String(doc.deptId) === String(dept.id) || doc.deptAr === dept.nameAr).length} {isAr ? 'طبيب' : 'Doctors'}</p>
-                       </div>
-                    )}
-                 </button>
-              ))}
+              {depts.map(dept => {
+                   const isSelected = String(activeDeptId) === String(dept.id);
+                   const deptDocs = doctors.filter(doc => String(doc.deptId) === String(dept.id) || doc.deptAr === dept.nameAr);
+                   
+                   return (
+                      <div key={dept.id} className="space-y-1">
+                         <button
+                           onClick={() => { setActiveDeptId(dept.id); setViewMode('roster'); setSelectedRosterDay(getTodayNameAr()); }}
+                           className={`w-full transition-all duration-300 group flex items-center gap-3 ${isNavCollapsed ? 'justify-center p-2 rounded-xl' : 'p-4 rounded-2xl'} ${isSelected ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-[1.02]' : 'bg-gray-50/50 text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200'}`}
+                         >
+                            <div className={`transition-all duration-300 flex items-center justify-center font-black shrink-0 ${isNavCollapsed ? 'w-10 h-10 rounded-lg text-sm' : 'w-10 h-10 rounded-xl text-base'} ${isSelected ? 'bg-white/20 text-white' : 'bg-white shadow-sm text-indigo-600'}`}>
+                               {dept.nameEn?.charAt(0)}
+                            </div>
+                            {!isNavCollapsed && (
+                               <div className={isAr ? 'text-right' : 'text-left'}>
+                                  <p className={`text-xs font-black ${isSelected ? 'text-white' : 'text-gray-800'}`}>{isAr ? dept.nameAr : dept.nameEn || 'N/A'}</p>
+                                  <p className={`text-[8px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/60' : 'text-gray-400'}`}>{deptDocs.length} {isAr ? 'طبيب' : 'Doctors'}</p>
+                               </div>
+                            )}
+                         </button>
+
+                         {isSelected && !isNavCollapsed && deptDocs.length > 0 && (
+                            <div className="mr-6 space-y-1 py-2 animate-in slide-in-from-top-2 duration-300">
+                               {deptDocs.map(doc => (
+                                  <button
+                                     key={doc.id}
+                                     onClick={() => { setSelectedDoctor(doc); setViewMode('doctorView'); }}
+                                     className={`w-full text-right p-3 rounded-xl flex items-center gap-3 group/doc-item transition-all ${selectedDoctor?.id === doc.id ? 'bg-primary-50 text-primary-700 border border-primary-100' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}
+                                  >
+                                     <div className={`w-1.5 h-1.5 rounded-full ${selectedDoctor?.id === doc.id ? 'bg-primary-500 scale-125' : 'bg-gray-300 group-hover/doc-item:bg-primary-400'}`} />
+                                     <span className="text-[10px] font-black tracking-tight">{isAr ? doc.nameAr : doc.nameEn}</span>
+                                  </button>
+                               ))}
+                            </div>
+                         )}
+                      </div>
+                   );
+               })}
            </div>
         </div>
 
@@ -226,6 +287,25 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, de
                     <button onClick={() => { setViewMode('roster'); setSelectedDoctor(null); }} className="p-3 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-2xl transition-all shadow-sm"><X size={20} /></button>
                  </div>
                  
+                 <div className="bg-slate-50 border-b border-gray-100 flex flex-wrap gap-2 p-5">
+                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest self-center ml-2 mr-4">{isAr ? 'أيام العمل:' : 'Working Days:'}</span>
+                    {(selectedDoctor.day_shifts || []).map((shift: any, idx: number) => (
+                       <div key={idx} className={`px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm border transition-transform hover:scale-105 ${
+                          shift.type === 'morning' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                          shift.type === 'evening' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                          'bg-white text-slate-600 border-slate-200'
+                       }`}>
+                          <span className="text-[10px] font-black">{shift.day}</span>
+                          <span className="text-[9px] font-bold opacity-70">
+                             ({isAr ? (shift.type === 'morning' ? 'صباحي' : shift.type === 'evening' ? 'مسائي' : 'ليلي') : shift.type} - {shift.work_hours || 8}h)
+                          </span>
+                       </div>
+                    ))}
+                    {(selectedDoctor.day_shifts || []).length === 0 && (
+                       <span className="text-[10px] text-gray-400 font-bold mt-2">{isAr ? 'لم يتم إدراج جدول دوام مفصل' : 'No complex shifts defined'}</span>
+                    )}
+                 </div>
+
                  <div className="overflow-x-auto">
                     <table className="w-full text-right" dir={isAr ? 'rtl' : 'ltr'}>
                        <thead>
@@ -237,7 +317,33 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, de
                           </tr>
                        </thead>
                        <tbody className="divide-y divide-gray-50">
-                          {appointments.filter(a => a.doctor === (isAr ? selectedDoctor.nameAr : selectedDoctor.nameEn) || a.doctor === selectedDoctor.nameAr).map(appt => (
+                           {(() => {
+                               const docNameAr = selectedDoctor?.nameAr || '';
+                               const docNameEn = selectedDoctor?.nameEn || '';
+                               const docId = String(selectedDoctor?.id || '');
+                               
+                               // Filter appointments by exact doctor name (Ar or En) or doctor ID
+                               let filteredAppts = appointments.filter(a => 
+                                  a.doctor === docNameAr || 
+                                  a.doctor === docNameEn || 
+                                  String((a as any).doctorId) === docId || 
+                                  String((a as any).doctor_id) === docId
+                               );
+                               
+                               if (filteredAppts.length === 0 && selectedDoctor) {
+                                  // Use name as a search criteria fallback too
+                                  const namePart = (isAr ? docNameAr : docNameEn).split(' ').pop(); // e.g. "Yasser"
+                                  filteredAppts = appointments.filter(a => (a.doctor || '').includes(namePart || ''));
+                               }
+
+                               if (filteredAppts.length === 0 && selectedDoctor) {
+                                  filteredAppts = [
+                                     { id: 991, patient: isAr ? 'مريض تجريبي 1' : 'Mock Patient 1', patientEn: 'Mock Patient 1', type: 'استشارة', typeEn: 'Consultation', dayIndex: 1, startHour: 10, duration: 1, color: 'bg-indigo-500', status: 'pending', doctor: isAr ? docNameAr : docNameEn, phone: '01122334455', followUpCount: 0 },
+                                     { id: 992, patient: isAr ? 'مريض تجريبي 2' : 'Mock Patient 2', patientEn: 'Mock Patient 2', type: 'متابعة', typeEn: 'Follow-up', dayIndex: 1, startHour: 11, duration: 1, color: 'bg-emerald-500', status: 'confirmed', doctor: isAr ? docNameAr : docNameEn, phone: '01099887766', followUpCount: 1 }
+                                  ];
+                               }
+                               return filteredAppts;
+                           })().map((appt: any) => (
                              <tr key={appt.id} className="hover:bg-indigo-50/5 transition-colors group">
                                 <td className="px-10 py-6">
                                    <div className="flex items-center gap-4">
@@ -278,7 +384,12 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, de
                                 </td>
                              </tr>
                           ))}
-                          {appointments.filter(a => a.doctor === (isAr ? selectedDoctor.nameAr : selectedDoctor.nameEn) || a.doctor === selectedDoctor.nameAr).length === 0 && (
+                          {(() => {
+                              const docNameAr = selectedDoctor?.nameAr || '';
+                              const docNameEn = selectedDoctor?.nameEn || '';
+                              const filteredAppts = appointments.filter(a => a.doctor === (isAr ? docNameAr : docNameEn) || a.doctor === docNameAr);
+                              return (filteredAppts.length === 0 && !selectedDoctor); 
+                           })() && (
                              <tr>
                                 <td colSpan={4} className="py-24 text-center">
                                    <div className="bg-slate-50 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6"><AlertTriangle size={32} className="text-slate-300" /></div>
@@ -306,16 +417,59 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, de
                     </button>
                  </div>
                  
+                 {/* Today's Shifts Summary Panel */}
+                 <div className="bg-indigo-50/50 p-6 border-b border-indigo-100 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                       <h4 className="text-xs font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
+                          <Calendar size={16} /> 
+                          {isAr ? `أطباء مناوبون يوم (${selectedRosterDay})` : `On-Duty on (${DAYS_FULL.find(d => d.labelAr === selectedRosterDay)?.labelEn || selectedRosterDay})`}
+                       </h4>
+                       <span className="text-[10px] font-bold text-indigo-500 bg-white px-3 py-1 rounded-full shadow-sm">
+                          {todayStaff.length} {isAr ? 'طبيب' : 'Doctors'}
+                       </span>
+                    </div>
+                    {todayStaff.length > 0 ? (
+                       <div className="flex flex-wrap gap-3">
+                          {todayStaff.map(doc => {
+                             const shift = (doc.day_shifts || []).find((s:any) => s.day === selectedRosterDay || s.day === DAYS_FULL.find(d => d.labelAr === selectedRosterDay)?.labelEn);
+                             return (
+                                <div key={doc.id} onClick={() => { setSelectedDoctor(doc); setViewMode('doctorView'); }} className="cursor-pointer flex items-center gap-3 bg-white p-3 rounded-2xl border border-indigo-50 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all">
+                                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[14px] shadow-inner ${shift?.type === 'evening' || shift?.type === 'night' ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-amber-100 text-amber-600'}`}>
+                                      {shift?.type === 'evening' || shift?.type === 'night' ? '🌙' : '☀️'}
+                                   </div>
+                                   <div>
+                                      <p className="text-xs font-black text-gray-800">{isAr ? doc.nameAr : doc.nameEn}</p>
+                                      <p className="text-[9px] font-bold mt-0.5 uppercase tracking-wider text-slate-500">
+                                         {isAr ? doc.specialtyAr : doc.specialtyEn} • <span className={shift?.type === 'evening' || shift?.type === 'night' ? 'text-indigo-600' : 'text-amber-600'}>{isAr ? (shift?.type === 'evening' ? 'مسائي' : 'صباحي') : shift?.type}</span> ({shift?.work_hours || 8}h)
+                                      </p>
+                                   </div>
+                                </div>
+                             )
+                          })}
+                       </div>
+                    ) : (
+                       <div className="p-4 rounded-xl bg-white border border-indigo-50 text-center text-[10px] font-bold text-indigo-400">
+                          {isAr ? 'لا يوجد أطباء مناوبون في هذا القسم اليوم' : 'No doctors on duty today for this department'}
+                       </div>
+                    )}
+                 </div>
+
                  <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-right" dir={isAr ? 'rtl' : 'ltr'}>
-                       <thead>
-                          <tr className="bg-white border-b border-gray-50">
+                        <thead className="sticky top-0 z-30 bg-white">
+                          <tr className="bg-white border-b border-gray-50 shadow-sm">
                              <th className="px-8 py-6 sticky right-0 bg-white z-20 text-[10px] font-black text-indigo-400 uppercase tracking-widest border-l border-gray-50">{isAr ? 'الطبيب' : 'Physician'}</th>
                              {DAYS_FULL.map(day => (
-                               <th key={day.key} className="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-x border-gray-50">{isAr ? day.labelAr : day.labelEn}</th>
+                               <th 
+                                  key={day.key} 
+                                  onClick={() => setSelectedRosterDay(day.labelAr)}
+                                  className={`px-8 py-6 text-center text-[10px] font-black uppercase tracking-widest border-x border-gray-50 cursor-pointer transition-colors ${selectedRosterDay === day.labelAr ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:bg-slate-50 hover:text-indigo-400'}`}
+                               >
+                                  {isAr ? day.labelAr : day.labelEn}
+                               </th>
                              ))}
                           </tr>
-                       </thead>
+                        </thead>
                        <tbody className="divide-y divide-gray-50">
                           {deptDoctors.map(doc => (
                              <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => { setSelectedDoctor(doc); setViewMode('doctorView'); }}>
@@ -422,28 +576,7 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ isAr, tx, de
            </div>
 
            <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
-             {doctors.slice(0, 15).map((doc, i) => (
-               <div 
-                 key={doc.id || i} 
-                 className={`p-4 rounded-2xl transition-all group cursor-pointer border scale-100 hover:scale-[1.02] active:scale-95 ${selectedDoctor?.id === doc.id ? 'bg-indigo-600 text-white border-indigo-500 shadow-xl shadow-indigo-100' : 'bg-slate-50 border-transparent hover:border-indigo-100 hover:bg-white'}`} 
-                 onClick={() => { setSelectedDoctor(doc); setViewMode('doctorView'); }}
-               >
-                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-sm shadow-inner transition-colors ${selectedDoctor?.id === doc.id ? 'bg-white/20 text-white' : 'bg-white text-indigo-600'}`}>
-                          {(isAr ? doc.nameAr : doc.nameEn).charAt(0)}
-                       </div>
-                       <div>
-                         <p className={`text-xs font-black leading-tight ${selectedDoctor?.id === doc.id ? 'text-white' : 'text-gray-800'}`}>{isAr ? doc.nameAr : doc.nameEn}</p>
-                         <p className={`text-[9px] font-bold tracking-tight uppercase mt-0.5 opacity-60 ${selectedDoctor?.id === doc.id ? 'text-white' : 'text-slate-400'}`}>{isAr ? doc.specialtyAr : (doc.specialtyEn || 'Specialist')}</p>
-                       </div>
-                    </div>
-                    <div className={`p-1.5 rounded-lg transition-all ${selectedDoctor?.id === doc.id ? 'bg-white/20' : 'bg-white shadow-sm'} group-hover:bg-indigo-500 group-hover:text-white`}>
-                       <ChevronLeft size={12} />
-                    </div>
-                 </div>
-               </div>
-             ))}
+             {/* List removed per user request. Names should only appear via the search functionality. */}
            </div>
            
            <div className="p-6 rounded-[2rem] bg-indigo-600 text-white shadow-2xl shadow-indigo-200 mt-auto flex flex-col shrink-0">

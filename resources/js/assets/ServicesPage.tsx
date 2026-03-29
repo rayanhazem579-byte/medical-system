@@ -10,7 +10,7 @@ export interface HospitalService {
   discount: number;
   classificationAr: string;
   classificationEn: string;
-  status: 'active' | 'inactive'; 
+  status: 'active' | 'inactive' | 'available'; 
 }
 
 interface ServicesPageProps {
@@ -46,6 +46,18 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
             <h2 className="text-lg font-bold text-gray-800">{isAr ? 'قائمة الخدمات والأسعار' : 'Services and Prices List'}</h2>
             <span className="bg-gray-100 text-gray-500 text-xs font-semibold px-2.5 py-1 rounded-lg">{services.length} {isAr ? 'خدمة' : 'service'}</span>
           </div>
+          <button 
+            onClick={() => {
+              setNewService({ nameAr: '', nameEn: '', classificationAr: '', classificationEn: '', priceArray: [], price: '', discount: '0' });
+              setIsAddServiceModalOpen(true);
+            }}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black flex items-center gap-2 transition-all shadow-lg shadow-indigo-100/50 transform hover:scale-[1.02] active:scale-95"
+          >
+            <div className="w-5 h-5 bg-white/20 rounded-lg flex items-center justify-center">
+              <Plus size={14} />
+            </div>
+            {isAr ? 'إضافة خدمة جديدة' : 'Add New Service'}
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -94,9 +106,11 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
                        <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg">{finalPrice.toFixed(2)} {isAr ? 'ج.س' : 'SDG'}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${service.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${service.status === 'active' ? 'bg-emerald-50 text-emerald-600' : service.status === 'available' ? 'bg-sky-50 text-sky-600' : 'bg-red-50 text-red-500'}`}>
                          <ShieldCheck size={12} />
-                         {service.status === 'active' ? (isAr ? 'نشط' : 'Active') : (isAr ? 'متوقف' : 'Inactive')}
+                         {service.status === 'active' ? (isAr ? 'نشط' : 'Active') : 
+                          service.status === 'available' ? (isAr ? 'متوفر' : 'Available') : 
+                          (isAr ? 'متوقف' : 'Stopped')}
                        </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -144,6 +158,18 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{isAr ? 'نسبة الخصم (%)' : 'Discount (%)'}</label>
                   <input required type="number" min="0" max="100" value={newService.discount} onChange={e => setNewService({...newService, discount: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all text-left" placeholder="0" dir="ltr" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{isAr ? 'حالة الخدمة' : 'Service Status'}</label>
+                  <select 
+                    value={newService.status || 'active'} 
+                    onChange={e => setNewService({...newService, status: e.target.value})} 
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                  >
+                    <option value="active">{isAr ? 'نشط' : 'Active'}</option>
+                    <option value="inactive">{isAr ? 'متوقف' : 'Stopped'}</option>
+                    <option value="available">{isAr ? 'متوفر' : 'Available'}</option>
+                  </select>
                 </div>
               </div>
               <div className="mt-8 flex items-center justify-end gap-3 pt-6 border-t border-gray-100">

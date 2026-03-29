@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// Testing edit
 import {
   Building2, Users, ClipboardList, Pill, Briefcase,
   Settings, LogOut, LayoutDashboard, Calendar,
@@ -8,13 +7,14 @@ import {
   ShieldCheck, HelpCircle, User, Key, Mail, Phone,
   Globe, Instagram, Twitter, Facebook, Linkedin,
   CheckCircle2, AlertCircle, RefreshCw, MoreVertical,
-  Plus, Edit3, Trash2, KeyRound, CalendarCheck, DollarSign, ConciergeBell, Wrench, UserCog, ChevronDown, ChevronUp, Filter, Download, Ban, Eye, Banknote, Check, Shield, AlertTriangle, Clock, Ambulance
+  Plus, Edit3, Trash2, KeyRound, CalendarCheck, DollarSign, ConciergeBell, Wrench, UserCog, ChevronDown, ChevronUp, Filter, Download, Ban, Eye, Banknote, Check, Shield, AlertTriangle, Clock, Ambulance, CreditCard
 } from 'lucide-react';
 import { DepartmentsPage } from './DepartmentsPage';
 import { ServicesPage } from './ServicesPage';
 import { EmployeesPage } from './EmployeesPage';
 import { SettingsPage } from './SettingsPage';
 import { DoctorsPage } from './DoctorsPage';
+import { NursesPage } from './NursesPage';
 import { PharmacyPage } from './PharmacyPage';
 import { SalariesPage } from './SalariesPage';
 import { FinancePage } from './FinancePage';
@@ -28,7 +28,6 @@ import { SpecialtiesPage } from './SpecialtiesPage';
 import { AccountsPage } from './AccountsPage';
 import { LaboratoryPage } from './LaboratoryPage';
 import { RadiologyPage } from './RadiologyPage';
-import { SuppliersPage } from './SuppliersPage';
 import { AmbulancePage } from './AmbulancePage';
 import { JobTitlesPage } from './JobTitlesPage';
 import { PharmacyManagementPage } from './PharmacyManagementPage';
@@ -40,7 +39,7 @@ type Lang = 'ar' | 'en';
 interface NavItem { id?: string; labelAr: string; labelEn: string; icon: React.ReactNode; active?: boolean }
 interface StatCard { titleAr: string; titleEn: string; value: string | number; subtitleAr: string; subtitleEn: string; icon: React.ReactNode; iconBg: string; iconColor: string; trendAr?: string; trendEn?: string; trendUp?: boolean }
 interface Department { id: number; code?: string; name: string; head_doctor: string; location: string; description: string; doctorCount: number; status: 'active' | 'inactive'; established: string; nameAr: string; nameEn: string; headAr: string; headEn: string; headAvatar: string; locationAr: string; locationEn: string }
-interface HospitalService { id: number; nameAr: string; nameEn: string; price: number; discount: number; classificationAr: string; classificationEn: string; status: 'active' | 'inactive'; }
+interface HospitalService { id: number; nameAr: string; nameEn: string; price: number; discount: number; classificationAr: string; classificationEn: string; status: 'active' | 'inactive' | 'available'; }
 interface Employee { id: number; name: string; staff_id: string; medical_id?: string; role: string; email: string; salary: number; hire_date: string; department_id: number; department?: any; nameAr: string; nameEn: string; positionAr: string; positionEn: string; deptAr: string; deptEn: string; status: 'active' | 'inactive'; joinDate: string; user?: any; }
 interface Doctor {
   id: number;
@@ -92,18 +91,16 @@ const mainNavItems: NavItem[] = [
   { id: 'labs', labelAr: 'المعامل', labelEn: 'Labs', icon: <FlaskConical size={20} /> },
   { id: 'radiology', labelAr: 'الأشعة', labelEn: 'Radiology', icon: <Activity size={20} /> },
   { id: 'ambulance', labelAr: 'الإسعاف', labelEn: 'Ambulance', icon: <Ambulance size={20} /> },
+  { id: 'pricing', labelAr: 'الأسعار والمناوبات', labelEn: 'Prices & Shifts', icon: <CreditCard size={20} /> },
 ];
 
 const managementItems: NavItem[] = [
-  { id: 'departments_mgmt', labelAr: 'الأقسام والمسميات', labelEn: 'Depts & Titles', icon: <Building2 size={20} /> },
-  { id: 'specialties_mgmt', labelAr: 'إدارة التخصصات', labelEn: 'Specialties Mgmt', icon: <ClipboardList size={20} /> },
-  { id: 'doctors_mgmt', labelAr: 'إدارة الأطباء', labelEn: 'Doctors Mgmt', icon: <Stethoscope size={20} /> },
+  { id: 'departments_mgmt', labelAr: 'الأقسام والمسميات والتخصصات', labelEn: 'Depts, Titles, & Specialties', icon: <Building2 size={20} /> },
+  { id: 'doctors_mgmt', labelAr: 'الأطباء والموظفين والتمريض', labelEn: 'Staff & Clinicians Mgmt', icon: <Stethoscope size={20} /> },
   { id: 'pharmacy_mgmt', labelAr: 'إدارة الصيدلية والمخزن', labelEn: 'Pharmacy & Warehouse', icon: <Pill size={20} /> },
   { id: 'labs_mgmt', labelAr: 'إدارة المختبرات', labelEn: 'Labs Mgmt', icon: <FlaskConical size={20} /> },
   { id: 'radiology_mgmt', labelAr: 'إدارة قسم الأشعة', labelEn: 'Radiology Mgmt', icon: <Activity size={20} /> },
-  { id: 'suppliers_mgmt', labelAr: 'إدارة الموردين', labelEn: 'Suppliers Management', icon: <Users size={20} /> },
   { id: 'accounts_mgmt', labelAr: 'حسابات الموظفين والأطباء', labelEn: 'Staff & Doctor Accounts', icon: <Shield size={20} /> },
-  { id: 'employees_mgmt', labelAr: 'إدارة الموظفين', labelEn: 'Employees Mgmt', icon: <UserCog size={20} /> },
   { id: 'services_mgmt', labelAr: 'إدارة الخدمات', labelEn: 'Services Mgmt', icon: <Wrench size={20} /> },
   { id: 'finance_mgmt', labelAr: 'إدارة المالية', labelEn: 'Finance Mgmt', icon: <Banknote size={20} /> },
   { id: 'salaries_mgmt', labelAr: 'إدارة المرتبات', labelEn: 'Salaries Mgmt', icon: <DollarSign size={20} /> },
@@ -114,6 +111,15 @@ export function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [lang, setLang] = useState<Lang>('ar');
+  const isAr = lang === 'ar';
+  const tx = t[lang];
+  const dir = isAr ? 'rtl' : 'ltr';
+
+  const toggleLang = () => {
+    const newLang = lang === 'ar' ? 'en' : 'ar';
+    setLang(newLang);
+    localStorage.setItem('lang', newLang);
+  };
 
   // Define role-based variables here, assuming currentUser might be null initially
   const [activePage, setActivePage] = useState<string>('dashboard');
@@ -203,6 +209,8 @@ export function App() {
   const [depts, setDepts] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [nurses, setNurses] = useState<any[]>([]);
+  const [isDocsTab, setIsDocsTab] = useState<'doctors' | 'nurses' | 'employees'>('doctors');
   const [isFetching, setIsFetching] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -272,7 +280,6 @@ export function App() {
       root.style.setProperty('--primary-700', color);
     }
   }, [systemSettings.themeColor]);
-  const toggleLang = () => setLang(prev => prev === 'ar' ? 'en' : 'ar');
 
   useEffect(() => {
     // Force login every time by not auto-setting isLoggedIn to true from old tokens
@@ -606,8 +613,26 @@ export function App() {
           salary: parseFloat(e.salary) || 0
         }));
 
-        setEmployees(allEmps.filter((e: any) => !['doctor', 'طبيب', 'طبيب عام', 'طبيب أخصائي'].includes((e.role || '').toLowerCase())));
+        const nurseListing = allEmps.filter((e: any) => ['nurse', 'ممرض', 'ممرضة', 'تمريض'].includes((e.role || '').toLowerCase())).map((e: any) => ({
+          ...e,
+          id: e.id,
+          nameAr: e.name || e.nameAr,
+          nameEn: e.name || e.nameEn,
+          deptAr: e.department?.name || 'N/A',
+          deptEn: e.department?.name || 'N/A',
+          deptId: e.department_id,
+          status: e.status || 'active',
+          phone: e.phone || 'N/A',
+          email: e.email || 'N/A',
+          medical_id: e.medical_id || e.staff_id,
+          day_shifts: e.day_shifts && e.day_shifts.length > 0 ? e.day_shifts : (e.manawbats || []),
+          job_title: e.job_title || (isAr ? 'ممرض' : 'Nurse'),
+          salary: parseFloat(e.salary) || 0
+        }));
+
+        setEmployees(allEmps.filter((e: any) => !['doctor', 'طبيب', 'طبيب عام', 'طبيب أخصائي', 'nurse', 'ممرض', 'ممرضة', 'تمريض'].includes((e.role || '').toLowerCase())));
         setDoctors(docs);
+        setNurses(nurseListing);
       }
 
       const payrollRes = await fetch('/api/payrolls', { headers });
@@ -725,7 +750,7 @@ export function App() {
     }
   };
 
-  const [isDeptsTab, setIsDeptsTab] = useState<'list' | 'titles' | 'hours'>('list');
+  const [isDeptsTab, setIsDeptsTab] = useState<'list' | 'titles' | 'specialties' | 'hours'>('list');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newDept, setNewDept] = useState({ code: '', nameAr: '', nameEn: '', headAr: '', headEn: '', count: '', locationAr: '', locationEn: '', status: 'active', description: '', phone: '', email: '', morning_start: '08:00', morning_end: '14:00', evening_start: '14:00', evening_end: '20:00', is_24h: false });
 
@@ -750,6 +775,15 @@ export function App() {
     day_shifts: []
   });
 
+  const [isAddNurseModalOpen, setIsAddNurseModalOpen] = useState(false);
+  const [newNurse, setNewNurse] = useState<any>({
+    nameAr: '', nameEn: '', deptId: '', phone: '', email: '', 
+    medical_id: '', dob: '', gender: 'female', address: '',
+    jobTitleAr: '', status: 'active', shifts: [],
+    bank_name: '', bank_account: '', salary: 0,
+    day_shifts: []
+  });
+
   const handleDeleteEmployee = async (id: number) => {
     if (!window.confirm(isAr ? 'هل أنت متأكد من حذف الموظف؟' : 'Are you sure you want to delete this employee?')) return;
     const token = localStorage.getItem('token');
@@ -767,6 +801,16 @@ export function App() {
       const res = await fetch(`/api/employees/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) fetchAllData();
       else alert(isAr ? 'فشل حذف الطبيب' : 'Failed to delete doctor');
+    } catch (err) { console.error('Delete error', err); }
+  };
+
+  const handleDeleteNurse = async (id: number) => {
+    if (!window.confirm(isAr ? 'هل أنت متأكد من حذف الممرض؟' : 'Are you sure you want to delete this nurse?')) return;
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`/api/employees/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) fetchAllData();
+      else alert(isAr ? 'فشل حذف الممرض' : 'Failed to delete nurse');
     } catch (err) { console.error('Delete error', err); }
   };
 
@@ -794,7 +838,7 @@ export function App() {
     };
 
     if (!isEdit) {
-      payload.staff_id = newEmployee.staffId || `EMP-${Date.now()}`;
+      payload.staff_id = newEmployee.staffId || undefined;
       payload.hire_date = new Date().toISOString().split('T')[0];
       payload.password = generatedPassword;
     }
@@ -855,8 +899,8 @@ export function App() {
     };
 
     if (!isEdit) {
-      payload.staff_id = generatedStaffId;
-      payload.medical_id = generatedMedicalId;
+      payload.staff_id = newDoctor.staff_id || undefined;
+      payload.medical_id = newDoctor.medical_id || undefined;
       payload.hire_date = new Date().toISOString().split('T')[0];
       payload.password = generatedPassword;
     }
@@ -874,6 +918,47 @@ export function App() {
       setNewDoctor({ nameAr: '', nameEn: '', specialtyAr: '', specialtyEn: '', deptId: '', phone: '', email: '', consultationPrice: 0, medicalId: '', dob: '', gender: 'male', address: '', degree: '', expYears: 0, jobTitle: '', status: 'active', shifts: [], dayShifts: [], workHours: { start: '08:00', end: '16:00' }, workingDays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'], nationalId: '', licenseNumber: '', practiceCert: '', bankName: '', bankAccount: '', commissionRate: 0 });
     }
     else { const err = await response.json(); alert(err.message || 'فشل حفظ الطبيب'); }
+  };
+
+  const handleAddNurse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    const isEdit = !!newNurse.id;
+    const method = isEdit ? 'PUT' : 'POST';
+    const url = isEdit ? `/api/employees/${newNurse.id}` : '/api/employees';
+
+    const payload: any = {
+        name: newNurse.nameAr || newNurse.name,
+        role: 'nurse',
+        email: newNurse.email,
+        phone: newNurse.phone,
+        department_id: parseInt(newNurse.deptId || '1') || (depts && depts.length > 0 ? depts[0].id : 1),
+        job_title: newNurse.jobTitleAr || (isAr ? 'ممرض' : 'Nurse'),
+        status: newNurse.status || 'active',
+        day_shifts: newNurse.day_shifts || [],
+        bank_name: newNurse.bank_name,
+        bank_account: newNurse.bank_account,
+        salary: parseFloat(newNurse.salary || '0')
+    };
+
+    if (!isEdit) {
+      payload.staff_id = newNurse.staff_id || undefined;
+      payload.medical_id = newNurse.medical_id || undefined;
+      payload.hire_date = new Date().toISOString().split('T')[0];
+      payload.password = Math.random().toString(36).replace(/[^a-z0-9]/gi, '').slice(-8);
+    }
+
+    const response = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (response.ok) {
+      setIsAddNurseModalOpen(false);
+      fetchAllData();
+      setNewNurse({ nameAr: '', nameEn: '', deptId: '', phone: '', email: '', medical_id: '', dob: '', gender: 'female', address: '', jobTitleAr: '', status: 'active', shifts: [], bank_name: '', bank_account: '', salary: 0, day_shifts: [] });
+    }
+    else { const err = await response.json(); alert(err.message || 'فشل حفظ البيانات'); }
   };
 
   const handleDeleteDept = async (id: number) => {
@@ -1395,9 +1480,6 @@ export function App() {
     } catch (err) { console.error("Delete patient error:", err); }
   };
 
-  const isAr = lang === 'ar';
-  const tx = t[lang];
-  const dir = isAr ? 'rtl' : 'ltr';
 
   const dashboardStatsList = [
     { titleAr: 'إجمالي الأقسام', titleEn: 'Total Departments', value: dashboardStats?.depts || 0, subtitleAr: 'قسم فعال', subtitleEn: 'active depts', icon: <Building2 size={24} />, iconBg: 'bg-sky-50', iconColor: 'text-sky-500', trendUp: true },
@@ -1407,7 +1489,7 @@ export function App() {
 
   if (!isLoggedIn) return (
     <LoginPage
-       isAr={lang === 'ar'}
+       isAr={isAr}
        onToggleLang={toggleLang}
        onLogin={(user: any) => { setCurrentUser(user); setIsLoggedIn(true); }}
        settings={systemSettings}
@@ -1483,7 +1565,7 @@ export function App() {
           )}
           {!sidebarCollapsed && <span className="font-bold truncate">{isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn}</span>}
         </div>
-        <nav className="flex-1 overflow-y-auto py-4 px-3">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar">
           <ul className="space-y-1">
             {mainNavItems.filter(item => {
                if (isAdmin) return true;
@@ -1512,41 +1594,49 @@ export function App() {
                         {item.icon}
                       </div>
                       {!sidebarCollapsed && <span>{label}</span>}
-                      {item.id === 'pharmacy' && prescriptions.length > 0 && (
-                        <span className={`absolute ${isAr ? 'left-3' : 'right-3'} top-1/2 -translate-y-1/2 w-5 h-5 bg-rose-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 ${activePage === item.id ? 'border-primary-600' : 'border-white'} animate-bounce`}>
-                           {prescriptions.length}
-                        </span>
-                      )}
                     </button>
-                 </li>
+                  </li>
                 );
             })}
           </ul>
+
           {isAdmin && (
-            <div className="mt-4">
-              <p className="text-[11px] font-bold text-gray-400 px-3 uppercase tracking-widest">{tx.management}</p>
-              <ul className="mt-2 space-y-1">
-                {managementItems.map(item => (
-                  <li key={item.id}>
-                    <button 
-                      onClick={() => setActivePage(item.id!)} 
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        activePage === item.id 
-                        ? (item.id === 'labs_mgmt' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-primary-50 text-primary-600') 
-                        : (item.id === 'labs_mgmt' ? 'text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 font-black' : 'text-gray-500 hover:bg-gray-50')
-                      }`}
-                    >
-                      <div className={`${item.id === 'labs_mgmt' && activePage !== item.id ? 'text-indigo-500' : ''}`}>
-                        {item.icon}
-                      </div>
-                      {!sidebarCollapsed && <span>{isAr ? item.labelAr : item.labelEn}</span>}
-                      {item.id === 'labs_mgmt' && !sidebarCollapsed && (
-                         <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            <div className="mt-8">
+              <button 
+                onClick={() => setManagementOpen(!managementOpen)}
+                className="w-full flex items-center justify-between px-4 mb-2 text-gray-400 hover:text-gray-600 transition-colors"
+                title={isAr ? 'الإدارة' : 'Management'}
+              >
+                {!sidebarCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">{isAr ? 'الإدارة' : 'Management'}</span>}
+                {!sidebarCollapsed && (managementOpen ? <ChevronUp size={14}/> : <ChevronDown size={14}/>)}
+              </button>
+              {managementOpen && (
+                <ul className="space-y-1">
+                  {managementItems.map(item => {
+                    const label = isAr ? item.labelAr : item.labelEn;
+                    return (
+                      <li key={item.id}>
+                        <button 
+                          onClick={() => setActivePage(item.id!)} 
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black transition-all relative group ${
+                            activePage === item.id 
+                            ? 'bg-primary-600 text-white shadow-xl shadow-primary-200' 
+                            : 'text-gray-400 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                        >
+                          <div className={`transition-transform duration-300 ${activePage === item.id ? 'scale-110' : 'group-hover:scale-110'}`}>
+                            {item.icon}
+                          </div>
+                          {!sidebarCollapsed && <span>{label}</span>}
+                          {item.id === 'labs_mgmt' && !sidebarCollapsed && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           )}
         </nav>
@@ -1604,10 +1694,20 @@ export function App() {
                      <input type="text" placeholder={isAr ? 'بحث سريع...' : 'Quick search...'} className="pr-12 pl-6 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-primary-50 transition-all w-48 focus:w-64" />
                   </div>
                   
-
+                  {activePage === 'services_mgmt' && (
+                    <button 
+                      onClick={() => {
+                        setNewService({ nameAr: '', nameEn: '', classificationAr: '', classificationEn: '', price: '', discount: '0' });
+                        setIsAddServiceModalOpen(true);
+                      }} 
+                      className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black transition-all shadow-xl shadow-primary-200"
+                    >
+                      <Plus size={16} />
+                      <span>{isAr ? 'إضافة خدمة جديدة' : 'Add New Service'}</span>
+                    </button>
+                  )}
                </div>
             </div>
-
           {activePage === 'dashboard' && <DashboardPage isAr={isAr} tx={tx} medicines={medicines} doctors={doctors} apiStats={dashboardStats} settings={systemSettings} />}
           {activePage === 'departments_mgmt' && (
             <div className="space-y-6">
@@ -1622,11 +1722,16 @@ export function App() {
                   className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${isDeptsTab === 'titles' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                   {isAr ? 'المسميات الوظيفية' : 'Job Titles'}
                 </button>
+                <button 
+                  onClick={() => setIsDeptsTab('specialties')} 
+                  className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${isDeptsTab === 'specialties' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {isAr ? 'والتخصصات' : 'Specialties'}
+                </button>
               </div>
 
               {isDeptsTab === 'list' ? (
                 <DepartmentsPage isAr={isAr} depts={depts} tx={tx} filterStatus={filterStatus} setFilterStatus={setFilterStatus} currentPage={currentPage} setCurrentPage={setCurrentPage} setIsAddModalOpen={setIsAddModalOpen} actionMenuId={actionMenuId} setActionMenuId={setActionMenuId} isAddModalOpen={isAddModalOpen} newDept={newDept} setNewDept={setNewDept} handleAddDept={handleAddDept} onUploadImage={handleUploadDeptImage} handleDeleteDept={handleDeleteDept} />
-              ) : (
+              ) : isDeptsTab === 'titles' ? (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                    <div className="flex items-center justify-between mb-8">
                       <div className="bg-primary-50 p-4 rounded-3xl border border-primary-100 flex items-center gap-4">
@@ -1639,21 +1744,48 @@ export function App() {
                    </div>
                    <JobTitlesPage isAr={isAr} tx={tx} employees={employees} doctors={doctors} jobTitles={jobTitles} setJobTitles={setJobTitles} onRefresh={fetchJobTitles} onNavigateToDoctors={handleNavigateToDoctors} />
                 </div>
+              ) : (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <SpecialtiesPage isAr={isAr} tx={tx} doctors={doctors} specialties={specialties} setSpecialties={setSpecialties} onRefresh={fetchAllData} onNavigateToDoctors={handleNavigateToDoctors} />
+                </div>
               )}
             </div>
           )}
-          {activePage === 'specialties_mgmt' && <SpecialtiesPage isAr={isAr} tx={tx} doctors={doctors} specialties={specialties} setSpecialties={setSpecialties} onRefresh={fetchAllData} onNavigateToDoctors={handleNavigateToDoctors} />}
-          {activePage === 'doctors_mgmt' && <DoctorsPage isAr={isAr} doctors={doctors} tx={tx} isAddDoctorModalOpen={isAddDoctorModalOpen} setIsAddDoctorModalOpen={setIsAddDoctorModalOpen} newDoctor={newDoctor} setNewDoctor={setNewDoctor} handleAddDoctor={handleAddDoctor} depts={depts} specialties={specialties} onDeleteDoctor={handleDeleteDoctor} onSendCredentials={handleSendCredentials} hospitalName={isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn} welcomeEmailTemplate={systemSettings.welcomeEmailTemplate} supportEmail={systemSettings.supportEmail} jobTitles={jobTitles} initialSearch={doctorFilter} onRefresh={fetchAllData} employees={employees} />}
+          {activePage === 'doctors_mgmt' && (
+            <div className="space-y-6">
+               <div className="flex items-center gap-1 bg-gray-100 p-1.5 rounded-2xl w-fit">
+                  <button onClick={() => setIsDocsTab('doctors')} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${isDocsTab === 'doctors' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <Stethoscope size={14} className="inline-block mb-0.5 ml-1" />
+                    {isAr ? 'جدول الأطباء' : 'Doctors Roster'}
+                  </button>
+                  <button onClick={() => setIsDocsTab('nurses')} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${isDocsTab === 'nurses' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <Users size={14} className="inline-block mb-0.5 ml-1" />
+                    {isAr ? 'جدول الممرضين' : 'Nurses Roster'}
+                  </button>
+                  <button onClick={() => setIsDocsTab('employees')} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${isDocsTab === 'employees' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <UserCog size={14} className="inline-block mb-0.5 ml-1" />
+                    {isAr ? 'بيانات الموظف' : 'Employee Data'}
+                  </button>
+               </div>
+
+               {isDocsTab === 'doctors' ? (
+                 <DoctorsPage isAr={isAr} doctors={doctors} tx={tx} isAddDoctorModalOpen={isAddDoctorModalOpen} setIsAddDoctorModalOpen={setIsAddDoctorModalOpen} newDoctor={newDoctor} setNewDoctor={setNewDoctor} handleAddDoctor={handleAddDoctor} depts={depts} specialties={specialties} onDeleteDoctor={handleDeleteDoctor} onSendCredentials={handleSendCredentials} hospitalName={isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn} welcomeEmailTemplate={systemSettings.welcomeEmailTemplate} supportEmail={systemSettings.supportEmail} jobTitles={jobTitles} initialSearch={doctorFilter} onRefresh={fetchAllData} employees={employees} />
+               ) : isDocsTab === 'nurses' ? (
+                 <NursesPage isAr={isAr} nurses={nurses} tx={tx} isAddNurseModalOpen={isAddNurseModalOpen} setIsAddNurseModalOpen={setIsAddNurseModalOpen} newNurse={newNurse} setNewNurse={setNewNurse} handleAddNurse={handleAddNurse} depts={depts} onDeleteNurse={handleDeleteNurse} onSendCredentials={handleSendCredentials} hospitalName={isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn} initialSearch={doctorFilter} onRefresh={fetchAllData} employees={employees} />
+               ) : (
+                 <EmployeesPage isAr={isAr} employees={employees} tx={tx} isAddEmployeeModalOpen={isAddEmployeeModalOpen} setIsAddEmployeeModalOpen={setIsAddEmployeeModalOpen} newEmployee={newEmployee} setNewEmployee={setNewEmployee} handleAddEmployee={handleAddEmployee} depts={depts} jobTitles={jobTitles} onDeleteEmployee={handleDeleteEmployee} onSendCredentials={handleSendCredentials} hospitalName={isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn} welcomeEmailTemplate={systemSettings.welcomeEmailTemplate} supportEmail={systemSettings.supportEmail} />
+               )}
+            </div>
+          )}
           {activePage === 'employees_mgmt' && <EmployeesPage isAr={isAr} employees={employees} tx={tx} isAddEmployeeModalOpen={isAddEmployeeModalOpen} setIsAddEmployeeModalOpen={setIsAddEmployeeModalOpen} newEmployee={newEmployee} setNewEmployee={setNewEmployee} handleAddEmployee={handleAddEmployee} depts={depts} jobTitles={jobTitles} onDeleteEmployee={handleDeleteEmployee} onSendCredentials={handleSendCredentials} hospitalName={isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn} welcomeEmailTemplate={systemSettings.welcomeEmailTemplate} supportEmail={systemSettings.supportEmail} />}
-          {activePage === 'accounts_mgmt' && <AccountsPage isAr={isAr} tx={tx} doctors={doctors} employees={employees} hospitalName={isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn} hospitalEmail={systemSettings.hospitalEmail} hospitalPhone={systemSettings.hospitalPhone} welcomeEmailTemplate={systemSettings.welcomeEmailTemplate} supportEmail={systemSettings.supportEmail} onDelete={(id, role) => { if (role === 'doctor') handleDeleteDoctor(id); else handleDeleteEmployee(id); }} />}
+          {activePage === 'accounts_mgmt' && <AccountsPage isAr={isAr} tx={tx} doctors={doctors} employees={employees} nurses={nurses} hospitalName={isAr ? systemSettings.hospitalNameAr : systemSettings.hospitalNameEn} hospitalEmail={systemSettings.hospitalEmail} hospitalPhone={systemSettings.hospitalPhone} welcomeEmailTemplate={systemSettings.welcomeEmailTemplate} supportEmail={systemSettings.supportEmail} onDelete={(id, role) => { if (role === 'doctor') handleDeleteDoctor(id); else handleDeleteEmployee(id); }} />}
           {activePage === 'services_mgmt' && <ServicesPage isAr={isAr} services={services} tx={tx} editingServiceId={editingServiceId} setEditingServiceId={setEditingServiceId} editingPrice={editingPrice} setEditingPrice={setEditingPrice} saveServicePrice={saveServicePrice} isAddServiceModalOpen={isAddServiceModalOpen} setIsAddServiceModalOpen={setIsAddServiceModalOpen} newService={newService} setNewService={setNewService} handleAddService={handleAddService} handleDeleteService={handleDeleteService} />}
           {activePage === 'patients' && <PatientsPage isAr={isAr} tx={tx} doctors={doctors} onDelete={handleDeletePatient} onNavigate={setActivePage} />}
-          {activePage === 'appointments' && <AppointmentsPage isAr={isAr} tx={tx} depts={depts} doctors={doctors} />}
-          {activePage === 'reception' && <ReceptionPage isAr={isAr} tx={tx} depts={depts} doctors={doctors} services={services} specialties={specialties} />}
-          {activePage === 'pricing' && <ReceptionPage isAr={isAr} tx={tx} depts={depts} doctors={doctors} services={services} specialties={specialties} initialTab="pricing" />}
+          {activePage === 'appointments' && <AppointmentsPage isAr={isAr} tx={tx} depts={depts} doctors={doctors} nurses={nurses} />}
+          {activePage === 'reception' && <ReceptionPage isAr={isAr} tx={tx} depts={depts} doctors={doctors} nurses={nurses} services={services} specialties={specialties} />}
+          {activePage === 'pricing' && <ReceptionPage isAr={isAr} tx={tx} depts={depts} doctors={doctors} nurses={nurses} services={services} specialties={specialties} initialTab="pricing" />}
           {activePage === 'pharmacy' && <PharmacyPage isAr={isAr} tx={tx} medicines={medicines} transactions={pharmacyTransactions} isAddMedicineModalOpen={isAddMedicineModalOpen} setIsAddMedicineModalOpen={setIsAddMedicineModalOpen} newMedicine={newMedicine} setNewMedicine={setNewMedicine} handleAddMedicine={handleAddMedicine} onUploadImage={handleUploadPharmacyImage} onDeleteMedicine={handleDeleteMedicine} prescriptions={prescriptions} onDispense={handleDispense} variant="dispensing" notifications={notifications} onToggleLang={toggleLang} />}
           {activePage === 'pharmacy_mgmt' && <PharmacyManagementPage isAr={isAr} medicines={medicines} prescriptions={prescriptions} transactions={pharmacyTransactions} onToggleLang={toggleLang} onAddMedicine={handleAddMedicine} onUpdateMedicine={handleUpdateMedicine} onDeleteMedicine={handleDeleteMedicine} onUpdateStock={() => {}} notifications={notifications} />}
-          {activePage === 'suppliers_mgmt' && <SuppliersPage isAr={isAr} tx={tx} />}
           {activePage === 'doctors' && <DoctorPortal isAr={isAr} tx={tx} onSendPrescription={handleSendPrescription} onSendLabRequest={handleSendLabRequest} onSendRadiologyRequest={handleSendRadiologyRequest} doctors={doctors} onAddNotification={addNotification} notifications={notifications} onToggleLang={toggleLang} />}
           {activePage === 'radiology' && <RadiologyPage isAr={isAr} tx={tx} notifications={notifications} onToggleLang={toggleLang} />}
           {activePage === 'radiology_mgmt' && <RadiologyPage isAr={isAr} tx={tx} notifications={notifications} onToggleLang={toggleLang} />}

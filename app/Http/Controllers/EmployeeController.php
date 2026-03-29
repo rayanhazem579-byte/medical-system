@@ -53,7 +53,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'staff_id' => 'required|string|unique:employees,staff_id',
+            'staff_id' => 'nullable|string|unique:employees,staff_id',
             'role' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email|unique:employees,email',
             'department_id' => 'required|exists:departments,id',
@@ -94,9 +94,24 @@ class EmployeeController extends Controller
                 if ($role === 'طبيب') $role = 'doctor';
                 if ($role === 'ممرض') $role = 'nurse';
 
-                // 2. Generate Credentials
+                // 2. Generate Credentials and Staff ID
+                $staffId = $validated['staff_id'] ?? null;
+                if (empty($staffId)) {
+                    $prefix = ($role === 'doctor') ? 'Doc' : (($role === 'nurse') ? 'Nur' : 'EMP');
+                    // Find the max sequential number for this prefix in staff_id
+                    $maxNum = Employee::where('staff_id', 'like', $prefix . '-%')
+                        ->orWhere('staff_id', 'like', $prefix . '/%')
+                        ->get()
+                        ->map(function($e) use ($prefix) { 
+                            $clean = str_replace([$prefix . '/', $prefix . '-'], '', $e->staff_id);
+                            return (int) $clean; 
+                        })
+                        ->max() ?? 1000;
+                    $staffId = $prefix . '-' . ($maxNum + 1);
+                }
+
                 $generatedPassword = substr(str_shuffle('abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789'), 0, 8); // Random password
-                $username = $validated['staff_id'];
+                $username = $staffId;
 
                 try {
                     $user = User::create([
@@ -118,22 +133,18 @@ class EmployeeController extends Controller
                     $employee = new Employee();
                     $employee->user_id = $user->id;
                     $employee->name = $validated['name'];
-                    $employee->staff_id = $validated['staff_id'];
+                    $employee->staff_id = $staffId;
                     
                     // Medical ID Auto-Generation for Doctors & Nurses
                     if ($role === 'doctor') {
                         if (empty($validated['medical_id'])) {
-                            $latestDoctor = Employee::where('role', 'doctor')->orderBy('id', 'desc')->first();
-                            $nextId = $latestDoctor ? $latestDoctor->id + 1 : 1;
-                            $employee->medical_id = 'DOC-' . (1000 + $nextId);
+                            $employee->medical_id = $staffId; // Match staff_id if it's a doctor's ID
                         } else {
                             $employee->medical_id = $validated['medical_id'];
                         }
                     } else if ($role === 'nurse') {
                         if (empty($validated['medical_id'])) {
-                            $latestNurse = Employee::where('role', 'nurse')->orderBy('id', 'desc')->first();
-                            $nextId = $latestNurse ? $latestNurse->id + 1 : 1;
-                            $employee->medical_id = 'NUR-' . (1000 + $nextId);
+                            $employee->medical_id = $staffId; // Match staff_id if it's a nurse's ID
                         } else {
                             $employee->medical_id = $validated['medical_id'];
                         }
@@ -376,8 +387,7 @@ class EmployeeController extends Controller
         // Use nameEn for username generation
         $isDoctor = ($person->role === 'doctor' || $person->role === 'طبيب');
         $isNurse = ($person->role === 'nurse' || $person->role === 'ممرض');
-        $usernamePrefix = $isDoctor ? ($person->medical_id ?: 'DOC') : ($isNurse ? ($person->medical_id ?: 'NUR') : ($person->staff_id ?: 'EMP'));
-        $defaultUser = $isDoctor ? ($person->medical_id ?? 'DOC-'.$person->id) : ($isNurse ? ($person->medical_id ?? 'NUR-'.$person->id) : ($person->staff_id ?? 'EMP-'.$person->id));
+        $defaultUser = $isDoctor ? ($person->medical_id ?? 'DOC/'.(1000+$person->id)) : ($isNurse ? ($person->medical_id ?? 'NUR/'.(1000+$person->id)) : ($person->staff_id ?? 'EMP/'.(1000+$person->id)));
 
         $user = $person->user_id ? User::find($person->user_id) : User::where('username', $defaultUser)->first();
         
@@ -409,7 +419,7 @@ class EmployeeController extends Controller
                 $role = $person->role;
                 $isDoctor = ($role === 'doctor' || $role === 'طبيب');
                 $isNurse = ($role === 'nurse' || $role === 'ممرض');
-                $staffId = $isDoctor ? ($person->medical_id ?? 'DOC-'.$person->id) : ($isNurse ? ($person->medical_id ?? 'NUR-'.$person->id) : ($person->staff_id ?? $person->staffId ?? 'EMP-'.$person->id));
+                $staffId = $isDoctor ? ($person->medical_id ?? 'DOC/'.(1000 + $person->id)) : ($isNurse ? ($person->medical_id ?? 'NUR/'.(1000 + $person->id)) : ($person->staff_id ?? $person->staffId ?? 'EMP/'.(1000+$person->id)));
                 $name = $person->nameAr ?? $person->nameEn ?? $person->name;
                 
                 Mail::to($person->email)->send(new PasswordNotification($name, $staffId, $newPassword, $role, $person->email));
@@ -453,7 +463,7 @@ class EmployeeController extends Controller
                 $role = $person->role;
                 $isDoctor = ($role === 'doctor' || $role === 'طبيب');
                 $isNurse = ($role === 'nurse' || $role === 'ممرض');
-                $staffId = $isDoctor ? ($person->medical_id ?? 'DOC-'.$person->id) : ($isNurse ? ($person->medical_id ?? 'NUR-'.$person->id) : ($person->staff_id ?? $person->staffId ?? 'EMP-'.$person->id));
+                $staffId = $isDoctor ? ($person->medical_id ?? 'DOC/'.(1000 + $person->id)) : ($isNurse ? ($person->medical_id ?? 'NUR/'.(1000 + $person->id)) : ($person->staff_id ?? $person->staffId ?? 'EMP/'.(1000+$person->id)));
                 $name = $person->nameAr ?? $person->nameEn ?? $person->name;
                 
                 Mail::to($person->email)->send(new PasswordNotification($name, $staffId, $password, $role, $person->email, $message));
@@ -527,7 +537,7 @@ class EmployeeController extends Controller
                         $role = $person->role;
                         $isDoctor = ($role === 'doctor' || $role === 'طبيب');
                         $isNurse = ($role === 'nurse' || $role === 'ممرض');
-                        $staffId = $isDoctor ? ($person->medical_id ?? 'DOC-'.$person->id) : ($isNurse ? ($person->medical_id ?? 'NUR-'.$person->id) : ($person->staff_id ?? $person->staffId ?? 'EMP-'.$person->id));
+                        $staffId = $isDoctor ? ($person->medical_id ?? 'DOC/'.(1000 + $person->id)) : ($isNurse ? ($person->medical_id ?? 'NUR/'.(1000 + $person->id)) : ($person->staff_id ?? $person->staffId ?? 'EMP/'.(1000+$person->id)));
                         $name = $person->nameAr ?? $person->nameEn ?? $person->name;
                         
                         Mail::to($person->email)->send(new PasswordNotification($name, $staffId, $validated['password'], $role, $person->email));

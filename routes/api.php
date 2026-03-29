@@ -26,7 +26,7 @@ use App\Http\Controllers\PharmacyProductCategoryController;
 |
 */
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/admins', [AuthController::class, 'listAdmins']);

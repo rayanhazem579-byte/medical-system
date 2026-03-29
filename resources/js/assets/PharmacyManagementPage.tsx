@@ -88,6 +88,7 @@ export const PharmacyManagementPage: React.FC<PharmacyManagementProps> = ({
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestData, setRequestData] = useState({ supplierId: '', medicineId: '', quantity: 1, notes: '' });
+    const [categories, setCategories] = useState<any[]>([]);
 
     const fetchSuppliers = async () => {
         try {
@@ -101,6 +102,33 @@ export const PharmacyManagementPage: React.FC<PharmacyManagementProps> = ({
             }
         } catch (err) { console.error("Failed to fetch suppliers:", err); }
     };
+
+    const fetchCategories = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/pharmacy-product-categories', {
+               headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+               const data = await res.json();
+               if (data.data.length === 0) {
+                  const defaults = [
+                     { id: 1001, name: 'Human Medicines', name_ar: 'أدوية بشرية' },
+                     { id: 1002, name: 'Cosmetics', name_ar: 'مستحضرات تجميل' },
+                     { id: 1003, name: 'Nutritional Supplements', name_ar: 'مكملات غذائية' },
+                     { id: 1004, name: 'Medical Supplies', name_ar: 'مستلزمات طبية' },
+                  ];
+                  setCategories(defaults);
+               } else {
+                  setCategories(data.data);
+               }
+            }
+        } catch (err) { console.error("Failed to fetch categories:", err); }
+    };
+
+    React.useEffect(() => {
+        fetchCategories();
+    }, []);
 
     React.useEffect(() => {
         if (activeTab === 'purchases' || activeTab === 'suppliers') {
@@ -119,7 +147,7 @@ export const PharmacyManagementPage: React.FC<PharmacyManagementProps> = ({
     ];
 
     const [newMed, setNewMed] = useState<any>({
-        nameAr: '', nameEn: '', categoryAr: 'Medicine', categoryEn: 'Medicine',
+        nameAr: '', nameEn: '', categoryAr: '', categoryEn: '',
         stock: 0, minStock: 10, price: 0, purchasePrice: 0,
         expiryDate: '', barcode: '', shapeAr: '', shapeEn: 'Tablets', strength: '',
         scientificNameAr: '', scientificNameEn: '',
@@ -350,7 +378,7 @@ export const PharmacyManagementPage: React.FC<PharmacyManagementProps> = ({
                                        </div>
                                        <div>
                                           <p className="text-sm font-black text-slate-800 tracking-tight">{isAr ? m.nameAr : m.nameEn}</p>
-                                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{m.categoryEn} • {m.shapeEn || 'Generic'}</p>
+                                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{isAr ? m.categoryAr : m.categoryEn} • {isAr ? (m.shapeAr || m.shapeEn) : (m.shapeEn || 'Generic')}</p>
                                        </div>
                                     </div>
                                  </td>
@@ -792,8 +820,24 @@ export const PharmacyManagementPage: React.FC<PharmacyManagementProps> = ({
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">{isAr ? 'القسم / الفئة' : 'CATEGORY'}</label>
-                                <input value={newMed.categoryAr} onChange={e => setNewMed({...newMed, categoryAr: e.target.value, categoryEn: e.target.value})} className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black focus:border-emerald-200 outline-none transition-all shadow-inner" placeholder={isAr ? 'أدوية...' : 'Medicine...'} />
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">{isAr ? 'التصنيف' : 'CLASSIFICATION'}</label>
+                                <select 
+                                    className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black focus:border-emerald-200 outline-none transition-all appearance-none cursor-pointer shadow-inner"
+                                    value={newMed.categoryEn}
+                                    onChange={(e) => {
+                                        const selected = categories.find(c => c.name === e.target.value);
+                                        setNewMed({
+                                            ...newMed, 
+                                            categoryEn: e.target.value, 
+                                            categoryAr: selected?.name_ar || e.target.value
+                                        });
+                                    }}
+                                >
+                                    <option value="">{isAr ? '-- اختر التصنيف --' : '-- Select Classification --'}</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.name}>{isAr ? cat.name_ar : cat.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">{isAr ? 'كود الباركود' : 'SKU / BARCODE'}</label>

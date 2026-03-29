@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Patient;
 use App\Models\Appointment;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class PatientController extends Controller
@@ -19,7 +20,7 @@ class PatientController extends Controller
         // Sort by file_number (MRN) DESC to show newest first
         $patients = Patient::orderBy('file_number', 'desc')->get();
         Log::info('Fetched ' . $patients->count() . ' patients from DB');
-        
+
         // Map database snake_case to frontend camelCase
         $mappedData = $patients->map(function ($patient) {
             return [
@@ -64,13 +65,29 @@ class PatientController extends Controller
      */
     public function store(Request $request)
     {
+        DB::beginTransaction();
         try {
-            $data = $request->validate([
+            $input = $request->all();
+            foreach ($input as $key => $value) {
+                if (is_string($value) && trim($value) === '') {
+                    $input[$key] = null;
+                }
+            }
+            $input = $request->all();
+            foreach ($input as $key => $value) {
+                if (is_string($value) && trim($value) === '') {
+                    $input[$key] = null;
+                }
+            }
+
+            $data = \Illuminate\Support\Facades\Validator::make($input, [
                 'name' => 'nullable|string',
+                'nameEn' => 'nullable|string',
                 'nameAr' => 'nullable|string',
                 'nationalId' => 'nullable|string',
-                'birthDate' => 'nullable|string',
+                'birthDate' => 'nullable|date',
                 'age' => 'nullable|integer',
+                'gender' => 'nullable|string',
                 'genderEn' => 'nullable|string',
                 'genderAr' => 'nullable|string',
                 'bloodType' => 'nullable|string',
@@ -79,7 +96,7 @@ class PatientController extends Controller
                 'email' => 'nullable|email',
                 'chronicDiseases' => 'nullable|string',
                 'drugAllergy' => 'nullable|string',
-                'lastVisit' => 'nullable|string',
+                'lastVisit' => 'nullable|date',
                 'status' => 'nullable|string',
                 'paymentStatus' => 'nullable|string',
                 'doctorEn' => 'nullable|string',
@@ -89,7 +106,7 @@ class PatientController extends Controller
                 "maritalStatus" => 'nullable|string',
                 "medicalHistory" => 'nullable|string',
                 "previousOperations" => 'nullable|string',
-            ]);
+            ])->validate();
 
             // Auto-generate MRN (file_number)
             $currentYear = date('Y');
@@ -102,41 +119,49 @@ class PatientController extends Controller
                 $newMRN = $count . '-' . $currentYear;
             }
 
+            $patientName = $data['name'] ?? $data['nameEn'] ?? $data['nameAr'] ?? 'N/A';
+            $patientGenderEn = $data['genderEn'] ?? $data['gender'] ?? null;
+            $patientGenderAr = $data['genderAr'] ?? null;
+
             $patient = Patient::create([
-                'name' => $data['name'] ?? 'N/A',
-                'name_ar' => $data['nameAr'],
+                'name' => $patientName,
+                'name_ar' => $data['nameAr'] ?? null,
                 'file_number' => $newMRN,
-                'national_id' => $data['nationalId'],
-                'birth_date' => $data['birthDate'],
-                'age' => $data['age'],
-                'gender_en' => $data['genderEn'],
-                'gender_ar' => $data['genderAr'],
-                'blood_type' => $data['bloodType'],
-                'phone' => $data['phone'],
-                'address' => $data['address'],
-                'email' => $data['email'],
-                'chronic_diseases' => $data['chronicDiseases'],
-                'drug_allergy' => $data['drugAllergy'],
-                'last_visit' => $data['lastVisit'],
+                'national_id' => $data['nationalId'] ?? null,
+                'birth_date' => $data['birthDate'] ?? null,
+                'age' => $data['age'] ?? null,
+                'gender_en' => $patientGenderEn,
+                'gender_ar' => $patientGenderAr,
+                'blood_type' => $data['bloodType'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'email' => $data['email'] ?? null,
+                'chronic_diseases' => $data['chronicDiseases'] ?? null,
+                'drug_allergy' => $data['drugAllergy'] ?? null,
+                'last_visit' => $data['lastVisit'] ?? null,
                 'status' => $data['status'] ?? 'waiting',
                 'payment_status' => $data['paymentStatus'] ?? 'unpaid',
-                'doctor_name' => $data['doctorEn'],
-                'doctor_name_ar' => $data['doctorAr'],
-                'dept_ar' => $data['deptAr'],
-                'dept_en' => $data['deptEn'],
-                "marital_status" => $data['maritalStatus'],
-                "medical_history" => $data['medicalHistory'],
-                "previous_operations" => $data['previousOperations'],
+                'doctor_name' => $data['doctorEn'] ?? null,
+                'doctor_name_ar' => $data['doctorAr'] ?? null,
+                'dept_ar' => $data['deptAr'] ?? null,
+                'dept_en' => $data['deptEn'] ?? null,
+                "marital_status" => $data['maritalStatus'] ?? null,
+                "medical_history" => $data['medicalHistory'] ?? null,
+                "previous_operations" => $data['previousOperations'] ?? null,
             ]);
 
             // Automatically create appointment if doctor or service picked
-            $docId = $request->doctorId ?? $request->doctor_id;
-            $srvId = $request->serviceId ?? $request->service_id;
+            $docId = $request->input('doctor_id') ?: $request->input('doctorId');
+            $srvId = $request->input('service_id') ?: $request->input('serviceId');
+            $docId = $docId !== '' ? (int) $docId : null;
+            $srvId = $srvId !== '' ? (int) $srvId : null;
 
             if ($docId || $srvId) {
-                $price = $request->servicePrice ?? $request->price ?? 0;
-                
-                // Optional: Fallback to actual service cost if price is not provided but service_id is
+                $price = $request->input('price') ?? $request->input('servicePrice') ?? 0;
+                if (is_string($price)) {
+                    $price = floatval($price);
+                }
+
                 if ($price == 0 && $srvId) {
                     $service = \App\Models\Service::find($srvId);
                     if ($service) {
@@ -148,18 +173,20 @@ class PatientController extends Controller
                     'patient_id' => $patient->id,
                     'doctor_id' => $docId,
                     'service_id' => $srvId,
-                    'appointment_date' => $request->appointmentDate ?? Carbon::now()->toDateString(),
-                    'appointment_time' => Carbon::now()->format('H:i'),
+                    'appointment_date' => $request->input('appointment_date') ?? $request->input('appointmentDate') ?? Carbon::now()->toDateString(),
+                    'appointment_time' => $request->input('appointment_time') ?? $request->input('appointmentTime') ?? Carbon::now()->format('H:i'),
+                    'shift' => $request->input('shift') ?? $request->shift ?? 'morning',
+                    'status' => 'waiting',
                     'price' => $price,
                     'discount' => 0,
                     'final_price' => $price,
-                    'status' => 'waiting',
                 ]);
                 Log::debug('Auto Appointment Created for Patient: ' . $patient->id . ' | Price: ' . $price . ' | Service: ' . ($srvId ?? 'N/A'));
             }
 
             Log::debug('Patient Created: ' . $patient->id . ' with MRN: ' . $newMRN);
 
+            DB::commit();
             return response()->json([
                 'success' => true,
                 'message' => 'Patient created successfully',
@@ -167,7 +194,15 @@ class PatientController extends Controller
                 'new_mrn' => $newMRN
             ], 201);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            Log::error('Patient Validation Error: ' . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error: ' . implode(', ', $e->validator->errors()->all())
+            ], 422);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Patient Store Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -192,7 +227,20 @@ class PatientController extends Controller
             return response()->json(['message' => 'Patient not found'], 404);
         }
 
-        $data = $request->validate([
+        $input = $request->all();
+        foreach ($input as $key => $value) {
+            if (is_string($value) && trim($value) === '') {
+                $input[$key] = null;
+            }
+        }
+        $input = $request->all();
+        foreach ($input as $key => $value) {
+            if (is_string($value) && trim($value) === '') {
+                $input[$key] = null;
+            }
+        }
+
+        $data = \Illuminate\Support\Facades\Validator::make($input, [
             'name' => 'nullable|string',
             'nameAr' => 'nullable|string',
             'nationalId' => 'nullable|string',
@@ -211,30 +259,48 @@ class PatientController extends Controller
             'previousOperations' => 'nullable|string',
             'status' => 'nullable|string',
             'paymentStatus' => 'nullable|string',
-        ]);
+        ])->validate();
 
         $updateData = [];
-        if (isset($data['name'])) $updateData['name'] = $data['name'];
-        if (isset($data['nameAr'])) $updateData['name_ar'] = $data['nameAr'];
-        if (isset($data['nationalId'])) $updateData['national_id'] = $data['nationalId'];
-        if (isset($data['birthDate'])) $updateData['birth_date'] = $data['birthDate'];
-        if (isset($data['age'])) $updateData['age'] = $data['age'];
-        if (isset($data['genderEn'])) $updateData['gender_en'] = $data['genderEn'];
-        if (isset($data['genderAr'])) $updateData['gender_ar'] = $data['genderAr'];
-        if (isset($data['bloodType'])) $updateData['blood_type'] = $data['bloodType'];
-        if (isset($data['phone'])) $updateData['phone'] = $data['phone'];
-        if (isset($data['address'])) $updateData['address'] = $data['address'];
-        if (isset($data['email'])) $updateData['email'] = $data['email'];
-        if (isset($data['chronicDiseases'])) $updateData['chronic_diseases'] = $data['chronicDiseases'];
-        if (isset($data['drugAllergy'])) $updateData['drug_allergy'] = $data['drugAllergy'];
-        if (isset($data['maritalStatus'])) $updateData['marital_status'] = $data['maritalStatus'];
-        if (isset($data['medicalHistory'])) $updateData['medical_history'] = $data['medicalHistory'];
-        if (isset($data['previousOperations'])) $updateData['previous_operations'] = $data['previousOperations'];
-        if (isset($data['status'])) $updateData['status'] = $data['status'];
-        if (isset($data['paymentStatus'])) $updateData['payment_status'] = $data['paymentStatus'];
+        if (isset($data['name']))
+            $updateData['name'] = $data['name'];
+        if (isset($data['nameAr']))
+            $updateData['name_ar'] = $data['nameAr'];
+        if (isset($data['nationalId']))
+            $updateData['national_id'] = $data['nationalId'];
+        if (isset($data['birthDate']))
+            $updateData['birth_date'] = $data['birthDate'];
+        if (isset($data['age']))
+            $updateData['age'] = $data['age'];
+        if (isset($data['genderEn']))
+            $updateData['gender_en'] = $data['genderEn'];
+        if (isset($data['genderAr']))
+            $updateData['gender_ar'] = $data['genderAr'];
+        if (isset($data['bloodType']))
+            $updateData['blood_type'] = $data['bloodType'];
+        if (isset($data['phone']))
+            $updateData['phone'] = $data['phone'];
+        if (isset($data['address']))
+            $updateData['address'] = $data['address'];
+        if (isset($data['email']))
+            $updateData['email'] = $data['email'];
+        if (isset($data['chronicDiseases']))
+            $updateData['chronic_diseases'] = $data['chronicDiseases'];
+        if (isset($data['drugAllergy']))
+            $updateData['drug_allergy'] = $data['drugAllergy'];
+        if (isset($data['maritalStatus']))
+            $updateData['marital_status'] = $data['maritalStatus'];
+        if (isset($data['medicalHistory']))
+            $updateData['medical_history'] = $data['medicalHistory'];
+        if (isset($data['previousOperations']))
+            $updateData['previous_operations'] = $data['previousOperations'];
+        if (isset($data['status']))
+            $updateData['status'] = $data['status'];
+        if (isset($data['paymentStatus']))
+            $updateData['payment_status'] = $data['paymentStatus'];
 
         $patient->update($updateData);
-        
+
         return response()->json(['success' => true, 'message' => 'Patient updated', 'data' => $patient]);
     }
 
@@ -256,11 +322,11 @@ class PatientController extends Controller
         try {
             // Disable foreign key checks for truncation
             \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
-            
+
             \App\Models\Appointment::truncate();
             \App\Models\MedicalRecord::truncate();
             \App\Models\Patient::truncate();
-            
+
             \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
             return response()->json(['success' => true, 'message' => 'Database cleared successfully']);

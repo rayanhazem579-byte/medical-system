@@ -10,10 +10,14 @@ interface LoginPageProps {
   onLogin: (user: any) => void;
   isAr: boolean;
   onToggleLang: () => void;
-  settings: any;
+  settings?: any;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isAr, onToggleLang, settings }) => {
+  const safeSettings = settings ?? {
+    themeColor: '#0ea5e9',
+    logoUrl: '/hospital_logo.png',
+  };
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('root');
   const [password, setPassword] = useState('');
@@ -53,7 +57,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isAr, onToggleLan
     }
   };
 
-  const primaryColor = settings.themeColor || '#0ea5e9';
+  const primaryColor = safeSettings.themeColor || '#0ea5e9';
+  const logoUrl = safeSettings.logoUrl || '/hospital_logo.png';
 
   return (
     <div className={`min-h-screen relative flex items-center justify-center overflow-hidden font-cairo bg-[#020617]`} dir={isAr ? 'rtl' : 'ltr'}>
@@ -146,7 +151,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isAr, onToggleLan
                 <div className="flex items-center gap-3">
                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2.5 shadow-xl relative group overflow-hidden">
                       <div className="absolute inset-0 bg-primary-600 scale-0 group-hover:scale-110 transition-transform duration-700"></div>
-                      <img src={settings.logoUrl || "/hospital_logo.png"} className="w-full h-full object-contain relative z-10" alt="Seal" />
+                      <img src={logoUrl} className="w-full h-full object-contain relative z-10" alt="Seal" />
                    </div>
                    <div className="h-8 w-px bg-white/10" />
                    <div className="space-y-0">

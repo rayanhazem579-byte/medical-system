@@ -432,7 +432,7 @@ export const PharmacyPage: React.FC<PharmacyPageProps> = ({
                                          </div>
                                          <div className="flex flex-col">
                                             <span className="text-sm font-black text-gray-800">{isAr ? m.nameAr : m.nameEn}</span>
-                                            <span className="text-[10px] text-gray-400 font-bold">{m.categoryEn} • {m.stock} {isAr ? 'عبوة متاحة' : 'Units Available'}</span>
+                                            <span className="text-[10px] text-gray-400 font-bold">{isAr ? m.categoryAr : m.categoryEn} • {m.stock} {isAr ? 'عبوة متاحة' : 'Units Available'}</span>
                                          </div>
                                       </div>
                                       <div className="text-right">

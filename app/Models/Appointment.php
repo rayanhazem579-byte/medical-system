@@ -15,6 +15,7 @@ class Appointment extends Model
         'service_id',
         'appointment_date',
         'appointment_time',
+        'shift',
         'status',
         'price',
         'discount',

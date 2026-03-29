@@ -53,8 +53,8 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
 }) => {
   const getDoctorRevenue = (docId: string | number) => {
     return appointments
-      .filter(a => String(a.doctor_id) === String(docId) && a.status !== 'cancelled')
-      .reduce((sum, a) => sum + (Number(a.final_price) || 0), 0);
+      .filter(a => String(a.doctor_id || a.doctorId) === String(docId) && a.status !== 'cancelled')
+      .reduce((sum, a) => sum + (Number(a.price || a.finalPrice || a.final_price) || 0), 0);
   };
 
   const textAlign = isAr ? 'text-right' : 'text-left';
@@ -92,7 +92,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
   ), 0);
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isAr ? 'font-arabic' : 'font-sans'}`} dir={isAr ? 'rtl' : 'ltr'}>
       
       {/* ─────── Financial Summaries ─────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-bold">
@@ -104,7 +104,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
             </p>
             <div className="flex items-center gap-2">
                <span className="text-2xl font-black text-gray-800">{totalPaid.toLocaleString()}</span>
-               <span className="text-xs font-bold text-gray-400">SDG</span>
+               <span className="text-xs font-bold text-gray-400">{isAr ? 'ج.س' : 'SDG'}</span>
             </div>
             <div className="mt-4 flex items-center gap-2 text-emerald-500 text-xs">
                <ArrowUpRight size={14} />
@@ -120,7 +120,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
             </p>
             <div className="flex items-center gap-2">
                <span className="text-2xl font-black text-gray-800">{totalPending.toLocaleString()}</span>
-               <span className="text-xs font-bold text-gray-400">SDG</span>
+               <span className="text-xs font-bold text-gray-400">{isAr ? 'ج.س' : 'SDG'}</span>
             </div>
             <div className="mt-4 flex items-center gap-2 text-amber-500 text-xs">
                <span>{salaries.filter(s => s.status === 'pending').length} {isAr ? 'موظف بانتظار الصرف' : 'employees waiting'}</span>
@@ -135,7 +135,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
             </p>
             <div className="flex items-center gap-2">
                <span className="text-2xl font-black text-gray-800">{totalDeductions.toLocaleString()}</span>
-               <span className="text-xs font-bold text-gray-400">SDG</span>
+               <span className="text-xs font-bold text-gray-400">{isAr ? 'ج.س' : 'SDG'}</span>
             </div>
             <div className="mt-4 flex items-center gap-2 text-red-500 text-xs">
                <ArrowDownRight size={14} />
@@ -226,7 +226,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
                     </td>
                     <td className="px-4 py-5 text-center">
                        {sal.role === 'doctor' ? (
-                         <span className="text-xs font-black text-indigo-600">%{sal.commissionRate}</span>
+                         <span className="text-xs font-black text-indigo-600">{isAr ? `${sal.commissionRate}%` : `%${sal.commissionRate}`}</span>
                        ) : (
                          <span className="text-gray-300 text-xs font-bold">—</span>
                        )}
@@ -239,7 +239,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
                     </td>
                     <td className="px-6 py-5">
                        <div className="flex flex-col">
-                          <span className="text-xs font-black text-gray-900 bg-primary-50 px-2 py-1 rounded inline-block border border-primary-100">{sal.netSalary.toLocaleString()} <span className="text-[9px] opacity-60">SDG</span></span>
+                          <span className="text-xs font-black text-gray-900 bg-primary-50 px-2 py-1 rounded inline-block border border-primary-100">{sal.netSalary.toLocaleString()} <span className="text-[9px] opacity-60">{isAr ? 'ج.س' : 'SDG'}</span></span>
                           <span className={`text-[8px] font-bold mt-1 inline-block ${sal.status === 'paid' ? 'text-emerald-500' : 'text-amber-500'}`}>
                              {sal.status === 'paid' ? (isAr ? '● تم الصرف' : '● PAID') : (isAr ? '● بانتظار الاعتماد' : '● PENDING')}
                           </span>
@@ -289,7 +289,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
                        </span>
                     </td>
                     <td className="px-8 py-5">
-                       <span className="text-sm font-black text-primary-600">{emp.salary?.toLocaleString() || 0} SDG</span>
+                       <span className="text-sm font-black text-primary-600">{emp.salary?.toLocaleString() || 0} {isAr ? 'ج.س' : 'SDG'}</span>
                     </td>
                     <td className="px-8 py-5 text-center">
                        <button 
@@ -440,7 +440,7 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
                     <div className="relative z-10 flex items-center justify-between">
                        <div>
                           <p className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.3em] mb-2">{isAr ? 'صافي المستحق' : 'Net Amount'}</p>
-                          <h2 className="text-4xl font-black">
+                          <h2 className={`text-4xl font-black ${isAr ? 'tracking-normal' : 'tracking-tighter'}`}>
                              {(
                                Number(newSalary.baseSalary || 0) + 
                                Number(newSalary.housingAllowance || 0) + 
@@ -454,9 +454,9 @@ export const SalariesPage: React.FC<SalariesPageProps> = ({
                                 Number(newSalary.absenceDeduction || 0) + 
                                 Number(newSalary.penaltyDeduction || 0))
                              ).toLocaleString()}
-                             <span className="text-sm font-bold text-indigo-300 ml-2">SDG</span>
+                             <span className="text-sm font-bold text-indigo-300 ml-2">{isAr ? 'ج.س' : 'SDG'}</span>
                           </h2>
-                          <p className="text-[9px] text-indigo-200 mt-4 italic">
+                          <p className="text-[10px] text-indigo-200 mt-4 italic font-black">
                              {isAr ? '💡 المرتب = الأساسي + البدلات + الحوافز + الإضافي (+ النسبة للأطباء) − الخصومات' : '💡 Net = Base + Allowances + Incentives + OT (+ Ratio for Docs) - Deductions'}
                           </p>
                        </div>

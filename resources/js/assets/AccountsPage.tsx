@@ -24,6 +24,7 @@ interface AccountsPageProps {
   tx: any;
   doctors: any[];
   employees: any[];
+  nurses: any[];
   hospitalName?: string;
   hospitalEmail?: string;
   hospitalPhone?: string;
@@ -33,7 +34,7 @@ interface AccountsPageProps {
 }
 
 export const AccountsPage: React.FC<AccountsPageProps> = ({
-  isAr, tx, doctors, employees,
+  isAr, tx, doctors, employees, nurses,
   hospitalName = 'مستشفى ريان',
   hospitalEmail = 'ryanhazem27@gmail.com',
   hospitalPhone = '+249 123 456 789',
@@ -76,6 +77,18 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
       lastLogin: 'Never',
       hasUser: !!d.user,
       staffId: d.medicalId || d.staff_id || ''
+    })),
+    ...nurses.map((n) => ({
+      id: n.id, 
+      nameAr: n.nameAr,
+      nameEn: n.nameEn,
+      role: 'nurse' as any,
+      username: n.user?.username || n.medical_id || n.staff_id || n.nameEn.toLowerCase().replace(/\s/g, '.'),
+      email: n.user?.email || n.email || `${n.nameEn.toLowerCase().replace(/\s/g, '.')}@hospital.com`,
+      status: (n.status === 'active' ? 'active' : 'suspended') as 'active' | 'suspended',
+      lastLogin: 'Never',
+      hasUser: !!n.user,
+      staffId: n.medical_id || n.staff_id || ''
     }))
   ];
 
@@ -84,8 +97,8 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
       acc.nameEn.toLowerCase().includes(searchTerm.toLowerCase()) ||
       acc.username.includes(searchTerm);
     if (filterType === 'all') return matchesSearch;
-    if (filterType === 'doctor') return matchesSearch && acc.role === 'doctor';
-    if (filterType === 'employee') return matchesSearch && acc.role !== 'doctor';
+    if (filterType === 'doctor') return matchesSearch && (acc.role === 'doctor' || acc.role === 'nurse');
+    if (filterType === 'employee') return matchesSearch && (acc.role !== 'doctor' && acc.role !== 'nurse');
     return matchesSearch;
   });
   const updateWelcomeMessage = (newPass: string, name: string, role: string, username: string, email: string) => {
@@ -232,8 +245,8 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
         <div className="flex bg-slate-50 p-1.5 rounded-[1.8rem] border border-gray-100 w-fit relative z-10 shadow-inner">
            {[
              { id: 'all', labelAr: 'الكل', labelEn: 'All Accounts' },
-             { id: 'doctor', labelAr: 'الأطباء', labelEn: 'Medical Staff' },
-             { id: 'employee', labelAr: 'الموظفون', labelEn: 'Administrative' }
+             { id: 'doctor', labelAr: 'الأطباء والتمريض', labelEn: 'Medical Staff' },
+             { id: 'employee', labelAr: 'الموظفون الإداريون', labelEn: 'Administrative' }
            ].map(tab => (
               <button 
                 key={tab.id}

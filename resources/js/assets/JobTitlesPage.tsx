@@ -130,61 +130,45 @@ export const JobTitlesPage: React.FC<JobTitlesPageProps> = ({ isAr, tx, employee
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-cairo">
-      {/* Header & Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-            <Briefcase size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{isAr ? 'إجمالي المسميات الوظيفية' : 'Total Job Titles'}</p>
-            <h3 className="text-xl font-black text-gray-800">{jobTitles.length}</h3>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-            <Users size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{isAr ? 'موظفون نشطون' : 'Active Employees'}</p>
-            <h3 className="text-xl font-black text-gray-800">{employees.length}</h3>
-          </div>
-        </div>
-      </div>
+    <div className={`space-y-8 animate-in fade-in duration-700 ${isAr ? 'font-arabic' : 'font-sans'}`} dir={isAr ? 'rtl' : 'ltr'}>
+      {/* Premium Gradient Header Overhaul */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-br from-slate-900 via-slate-800 to-primary-950 p-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
+         <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-[100px] -mr-40 -mt-40 transition-all group-hover:bg-white/10 duration-1000" />
+         <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-500/10 rounded-full blur-[80px] -ml-32 -mb-32 group-hover:bg-primary-500/20 duration-1000" />
+         
+         <div className="flex items-center gap-6 relative z-10">
+            <div className="w-24 h-24 bg-white/10 backdrop-blur-2xl rounded-[2rem] flex items-center justify-center text-white border border-white/20 shadow-2xl group-hover:scale-105 group-hover:-rotate-3 transition-all duration-700">
+               <Briefcase size={40} className="drop-shadow-lg" />
+            </div>
+            <div className="text-white">
+               <h2 className="text-4xl font-black tracking-tighter leading-none mb-3">
+                  {isAr ? 'إدارة المسميات والوظائف' : 'Job Titles & Roles'}
+               </h2>
+               <div className="flex items-center gap-3">
+                  <span className="w-3 h-3 bg-amber-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
+                  <p className="text-xs font-black opacity-60 uppercase tracking-[0.4em]">
+                     {isAr ? 'توصيف الأدوار والهيكل الوظيفي الطبي' : 'Define Clinical roles & Hierarchy'}
+                  </p>
+               </div>
+            </div>
+         </div>
 
-      {/* Control Bar */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text"
-            placeholder={isAr ? 'البحث عن مسمى وظيفي...' : 'Search job title...'}
-            className="w-full pr-12 pl-6 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-4 focus:ring-primary-50 transition-all text-xs font-bold"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-4 items-center">
-          <button 
-            onClick={() => {
-              setIsEditMode(false);
-              setEditingId(null);
-              setNewJobTitle({ 
-                nameAr: '', 
-                nameEn: '', 
-                descriptionAr: '', 
-                descriptionEn: '', 
-                status: 'active'
-              });
-              setIsAddModalOpen(true);
-            }}
-            className="bg-primary-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-primary-100 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 text-xs font-black"
-          >
-            <Plus size={18} />
-            {isAr ? 'مسمى وظيفي جديد' : 'New Job Title'}
-          </button>
-        </div>
+         <div className="flex items-center gap-4 relative z-10">
+            <button 
+               onClick={() => {
+                 setIsEditMode(false);
+                 setEditingId(null);
+                 setNewJobTitle({ 
+                   nameAr: '', nameEn: '', descriptionAr: '', descriptionEn: '', status: 'active'
+                 });
+                 setIsAddModalOpen(true);
+               }} 
+               className="px-8 py-5 bg-white text-slate-900 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-2xl hover:shadow-white/20 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-3 border border-white/10"
+            >
+               <Plus size={18} />
+               {isAr ? 'إضافة مسمى وظيفي' : 'Create Job Role'}
+            </button>
+         </div>
       </div>
 
       {/* Grid List */}
@@ -280,9 +264,15 @@ export const JobTitlesPage: React.FC<JobTitlesPageProps> = ({ isAr, tx, employee
                    </div>
                 </div>
 
-                <div className="space-y-1">
-                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{isAr ? 'الوصف' : 'Description'}</label>
-                   <textarea value={newJobTitle.descriptionAr} onChange={e => setNewJobTitle({...newJobTitle, descriptionAr: e.target.value})} className="w-full p-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-4 focus:ring-primary-50 font-bold text-xs h-32 resize-none" placeholder={isAr ? 'اكتب وصفاً للمسمى الوظيفي هنا...' : 'Write job title description here...'} />
+                <div className="space-y-4">
+                   <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{isAr ? 'الوصف (عربي)' : 'Arabic Description'}</label>
+                      <textarea value={newJobTitle.descriptionAr} onChange={e => setNewJobTitle({...newJobTitle, descriptionAr: e.target.value})} className="w-full p-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none focus:ring-4 focus:ring-primary-50 font-bold text-xs h-24 resize-none" placeholder={isAr ? 'اكتب وصف الوظيفة بالعربي...' : 'Arabic content...'} />
+                   </div>
+                   <div className="space-y-1 text-left" dir="ltr">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">English Description</label>
+                      <textarea value={newJobTitle.descriptionEn} onChange={e => setNewJobTitle({...newJobTitle, descriptionEn: e.target.value})} className="w-full p-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none focus:ring-4 focus:ring-primary-50 font-bold text-xs h-24 resize-none" placeholder="Write English description here..." />
+                   </div>
                 </div>
 
                 <div className="space-y-1">
