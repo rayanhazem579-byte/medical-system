@@ -118,7 +118,20 @@ class EmployeeController extends Controller
                     $employee->user_id = $user->id;
                     $employee->name = $validated['name'];
                     $employee->staff_id = $validated['staff_id'];
-                    $employee->medical_id = $validated['medical_id'] ?? null;
+                    
+                    // Medical ID Auto-Generation for Doctors
+                    if ($role === 'doctor') {
+                        if (empty($validated['medical_id'])) {
+                            $latestDoctor = Employee::where('role', 'doctor')->orderBy('id', 'desc')->first();
+                            $nextId = $latestDoctor ? $latestDoctor->id + 1 : 1;
+                            $employee->medical_id = 'DOC-' . (1000 + $nextId);
+                        } else {
+                            $employee->medical_id = $validated['medical_id'];
+                        }
+                    } else {
+                        $employee->medical_id = $validated['medical_id'] ?? null;
+                    }
+                    
                     $employee->role = $role;
                     $employee->specialty_ar = $validated['specialty_ar'] ?? null;
                     $employee->specialty_en = $validated['specialty_en'] ?? null;

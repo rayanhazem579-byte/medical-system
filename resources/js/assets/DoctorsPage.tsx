@@ -416,6 +416,41 @@ export const DoctorsPage: FC<DoctorsPageProps> = ({
             <form onSubmit={handleAddDoctor} className="p-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
+                  <div className="p-4 bg-primary-50 rounded-2xl border-2 border-dashed border-primary-100 mb-6">
+                    <label className="text-[10px] font-black text-primary-600 uppercase tracking-widest block mb-2 px-1 flex items-center gap-2">
+                      <Users size={14} />
+                      {isAr ? 'استيراد من قائمة الموظفين' : 'Import from Staff Roster'}
+                    </label>
+                    <select 
+                      className="w-full px-4 py-2.5 bg-white border border-primary-100 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-primary-50 transition-all appearance-none"
+                      onChange={(e) => {
+                        const empId = e.target.value;
+                        const emp = employees.find(ev => String(ev.id) === String(empId));
+                        if (emp) {
+                          setNewDoctor({
+                            ...newDoctor,
+                            nameAr: emp.nameAr || emp.name,
+                            email: emp.email,
+                            phone: emp.phone,
+                            deptId: emp.department_id || emp.deptId,
+                            jobTitleAr: emp.positionAr,
+                            day_shifts: emp.day_shifts || []
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">{isAr ? 'اختر موظفاً للمتابعة...' : 'Select personnel to onboard...'}</option>
+                      {employees.filter(e => !doctors.some(d => d.id === e.id)).map(emp => (
+                        <option key={emp.id} value={emp.id}>
+                          {isAr ? emp.nameAr : emp.nameEn || emp.name} ({isAr ? emp.positionAr : emp.positionEn})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[9px] text-primary-400 font-bold mt-2 px-1 italic">
+                      {isAr ? '* سيتم ملء البيانات تلقائياً عند الاختيار' : '* Fields will auto-populate upon selection'}
+                    </p>
+                  </div>
+
                   <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] flex items-center gap-2 mb-4 border-b border-indigo-50 pb-2"><Info size={14}/> {isAr ? 'المعلومات المهنية' : 'Professional Dossier'}</h4>
                   <div className="space-y-4">
                     <div>
@@ -454,8 +489,10 @@ export const DoctorsPage: FC<DoctorsPageProps> = ({
                         <input type="number" className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-50 rounded-2xl text-xs font-black focus:border-primary-500 outline-none transition-all shadow-inner" value={newDoctor.consultationPrice} onChange={(e) => setNewDoctor({ ...newDoctor, consultationPrice: e.target.value })} />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">{isAr ? 'المعرف الطبي' : 'Medical License ID'}</label>
-                        <input className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-50 rounded-2xl text-xs font-black focus:border-primary-500 outline-none transition-all shadow-inner" value={newDoctor.medical_id} onChange={(e) => setNewDoctor({ ...newDoctor, medical_id: e.target.value })} placeholder="Ex: DOC-2024" />
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1 flex items-center justify-between">
+                          <span>{isAr ? 'الرقم الطبي (يتم توليده تلقائياً)' : 'Medical ID (Auto-Generated)'}</span>
+                        </label>
+                        <input className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-50 rounded-2xl text-xs font-black focus:border-primary-500 outline-none transition-all shadow-inner" value={newDoctor.medical_id || ''} onChange={(e) => setNewDoctor({ ...newDoctor, medical_id: e.target.value })} placeholder={isAr ? "اتركه فارغاً للتوليد التلقائي (مثال: DOC-1001)" : "Leave blank to auto-generate (e.g. DOC-1001)"} />
                       </div>
                     </div>
                   </div>
